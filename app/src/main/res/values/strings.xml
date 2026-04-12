@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">velo</string>
+    <string name="app_tagline">paste · share · download</string>
+
+    <!-- Home -->
+    <string name="paste_link_hint">paste a link here</string>
+    <string name="btn_download">download</string>
+    <string name="recent_downloads">recent downloads</string>
+    <string name="no_downloads_yet">nothing downloaded yet</string>
+
+    <!-- Clipboard banner -->
+    <string name="clipboard_banner">link detected</string>
+    <string name="clipboard_download">download it</string>
+    <string name="clipboard_dismiss">dismiss</string>
+
+    <!-- Quality sheet -->
+    <string name="fetching_formats">fetching available formats…</string>
+    <string name="tab_video">video</string>
+    <string name="tab_audio">audio</string>
+    <string name="btn_cancel">cancel</string>
+    <string name="btn_retry">retry</string>
+    <string name="downloading">downloading…</string>
+    <string name="download_complete">download complete</string>
+    <string name="unsupported_url">this link isn\'t supported</string>
+    <string name="fetch_error">couldn\'t fetch formats</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_downloads">downloads</string>
+    <string name="notif_channel_downloads_desc">velo download progress</string>
+    <string name="notif_downloading">downloading</string>
+    <string name="notif_complete">download complete</string>
+    <string name="notif_action_open">open</string>
+    <string name="notif_action_share">share</string>
+
+    <!-- Settings -->
+    <string name="settings">settings</string>
+    <string name="setting_theme">theme</string>
+    <string name="setting_theme_dark">dark</string>
+    <string name="setting_theme_light">light</string>
+    <string name="setting_download_path">download folder</string>
+    <string name="setting_update_ytdlp">update extractor</string>
+    <string name="setting_update_ytdlp_desc">check for yt-dlp updates</string>
+    <string name="updating">updating…</string>
+    <string name="up_to_date">already up to date</string>
+</resources>

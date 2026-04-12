@@ -1,0 +1,7 @@
+1. Connect your phone via Wireless Debugging in Android Studio.
+2. Open the "Logcat" tool window (View > Tool Windows > Logcat, or click it at the bottom).
+3. In the Logcat filter bar (where it usually says `package:mine`), paste this exact filter:
+
+package:mine level:error | tag:YoutubeDL | tag:DownloadWorker
+
+4. Try the download again, and copy any red exception stack traces that show up in the logcat.

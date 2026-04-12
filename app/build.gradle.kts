@@ -1,0 +1,145 @@
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
+}
+
+android {
+    namespace = "com.velo.app"
+    compileSdk = 35
+
+    defaultConfig {
+        applicationId = "com.velo.app"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
+
+        ndk {
+            abiFilters += listOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+        }
+
+        // Device-verification endpoint — change here instead of in DeviceTracker.kt.
+        // Can be overridden per buildType (e.g. a staging URL in debug).
+        buildConfigField(
+            "String",
+            "NETLIFY_VERIFY_ENDPOINT",
+            "\"https://gleeful-paprenjak-a451e2.netlify.app/.netlify/functions/verifyDevice\""
+        )
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    kotlinOptions { 
+        jvmTarget = "21"
+        freeCompilerArgs += listOf("-Xannotation-default-target=param-property")
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+}
+
+dependencies {
+    // Compose UI — BOM 2025.02.00 (latest stable)
+    val composeBom = platform("androidx.compose:compose-bom:2025.02.00")
+    implementation(composeBom)
+
+    // Compose UI
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.animation:animation")
+
+    // Activity + Navigation
+    implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.navigation:navigation-compose:2.8.9")
+
+    // Core AndroidX
+    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("com.google.android.material:material:1.13.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
+    // Android 16 — Predictive Back full support
+    implementation("androidx.activity:activity:1.10.1")
+
+    // Hilt DI
+    implementation("com.google.dagger:hilt-android:2.56")
+    ksp("com.google.dagger:hilt-compiler:2.56")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
+
+    // WorkManager (background downloads)
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+
+    // Room 2.7.0 — KSP2 compatible (fixes 'unexpected jvm signature V')
+    implementation("androidx.room:room-runtime:2.7.0")
+    implementation("androidx.room:room-ktx:2.7.0")
+    ksp("androidx.room:room-compiler:2.7.0")
+
+    // Media3 (ExoPlayer)
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
+
+    // DataStore (settings)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // yt-dlp wrapper with 16KB Android 15 + Python 3.11+ support (removes libandroid-support.so dependency)
+    implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
+    implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
+    implementation("io.github.junkfood02.youtubedl-android:aria2c:0.18.1")
+
+    // Networking
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Image loading (thumbnails)
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Kotlin coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+
+    // Debug
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+}

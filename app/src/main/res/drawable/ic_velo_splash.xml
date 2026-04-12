@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Velo splash screen icon — simple download arrow in cobalt style -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background circle -->
+    <path
+        android:fillColor="#0E0E0E"
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
+
+    <!-- Download arrow shaft -->
+    <path
+        android:strokeColor="#F2F2F2"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,32 L54,68" />
+
+    <!-- Arrow head -->
+    <path
+        android:strokeColor="#F2F2F2"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M42,58 L54,70 L66,58" />
+
+    <!-- Bottom bar -->
+    <path
+        android:strokeColor="#F2F2F2"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M38,76 L70,76" />
+</vector>

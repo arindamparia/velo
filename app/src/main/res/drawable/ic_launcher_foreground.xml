@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Velo launcher foreground — stylised "V" + download arrow -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer safe zone is 72dp centred, so content starts at 18dp -->
+
+    <!-- Download arrow shaft -->
+    <path
+        android:strokeColor="#F2F2F2"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M54,30 L54,65" />
+
+    <!-- Arrow chevron -->
+    <path
+        android:strokeColor="#F2F2F2"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M40,54 L54,68 L68,54" />
+
+    <!-- Base bar -->
+    <path
+        android:strokeColor="#F2F2F2"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M36,76 L72,76" />
+</vector>

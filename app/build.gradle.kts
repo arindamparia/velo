@@ -57,10 +57,11 @@ android {
         create("release") {
             // CI: reads from env vars set by the GitHub Actions workflow.
             // Local: falls back to key.properties (gitignored — see key.properties.example).
-            storeFile     = file(System.getenv("KEYSTORE_PATH")     ?: keyProps.getProperty("storeFile", ""))
-            storePassword = System.getenv("KEYSTORE_PASSWORD")       ?: keyProps.getProperty("storePassword", "")
-            keyAlias      = System.getenv("KEY_ALIAS")               ?: keyProps.getProperty("keyAlias", "")
-            keyPassword   = System.getenv("KEY_PASSWORD")            ?: keyProps.getProperty("keyPassword", "")
+            val storePath = System.getenv("KEYSTORE_PATH") ?: keyProps.getProperty("storeFile", "")
+            if (storePath.isNotEmpty()) storeFile = file(storePath)
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: keyProps.getProperty("storePassword", "")
+            keyAlias      = System.getenv("KEY_ALIAS")         ?: keyProps.getProperty("keyAlias", "")
+            keyPassword   = System.getenv("KEY_PASSWORD")      ?: keyProps.getProperty("keyPassword", "")
         }
     }
 

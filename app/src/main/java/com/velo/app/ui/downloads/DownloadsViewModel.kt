@@ -91,26 +91,31 @@ class DownloadsViewModel @Inject constructor(
                             dao.deleteById(record.id)
                         }
                     } else if (p != null && p.startsWith("content://")) {
-                        var actuallyExists = true
+                        // On Android 10+ scoped storage, checking DATA column + File.exists() is
+                        // unreliable — the path is returned but the app lacks direct fs access,
+                        // so File.exists() returns false even when the file is present.
+                        // Instead just verify the content URI still resolves in MediaStore.
                         try {
-                            context.contentResolver.query(Uri.parse(p), arrayOf(android.provider.MediaStore.MediaColumns.DATA), null, null, null)?.use { cursor ->
-                                if (cursor.moveToFirst()) {
-                                    val absolutePath = cursor.getString(0)
-                                    if (absolutePath != null && !File(absolutePath).exists()) {
-                                        actuallyExists = false
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {}
-                        if (!actuallyExists) {
-                            dao.deleteById(record.id)
-                        }
+                            val exists = context.contentResolver.query(
+                                Uri.parse(p),
+                                arrayOf(android.provider.MediaStore.MediaColumns._ID),
+                                null, null, null
+                            )?.use { it.count > 0 } ?: true  // null cursor → keep record
+                            if (!exists) dao.deleteById(record.id)
+                        } catch (_: Exception) { /* keep record on any error */ }
                     }
                 }
             }
 
-            // Clean up orphaned temp files in the sandbox — but never touch completed download files.
-            clearSandboxCache(context, protectedPaths = doneFilePaths)
+            // Only clean up sandbox temp files when no download is actively writing to that dir.
+            // yt-dlp creates .part / intermediate stream files there during a download; deleting
+            // them mid-flight causes the download to fail near completion then auto-retry.
+            val hasActiveDownloads = currentList.any {
+                it.status == DownloadStatus.DOWNLOADING || it.status == DownloadStatus.QUEUED
+            }
+            if (!hasActiveDownloads) {
+                clearSandboxCache(context, protectedPaths = doneFilePaths)
+            }
         }
     }
 

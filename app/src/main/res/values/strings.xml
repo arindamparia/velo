@@ -28,6 +28,8 @@
     <!-- Notifications -->
     <string name="notif_channel_downloads">downloads</string>
     <string name="notif_channel_downloads_desc">velo download progress</string>
+    <string name="notif_channel_playback">media playback</string>
+    <string name="notif_channel_playback_desc">controls for currently playing files</string>
     <string name="notif_downloading">downloading</string>
     <string name="notif_complete">download complete</string>
     <string name="notif_action_open">open</string>

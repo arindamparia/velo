@@ -149,9 +149,11 @@ dependencies {
     implementation("androidx.room:room-ktx:2.7.0")
     ksp("androidx.room:room-compiler:2.7.0")
 
-    // Media3 (ExoPlayer)
+    // Media3 (ExoPlayer + session for system media controls)
     implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.media3:media3-ui:1.5.1")
+    implementation("androidx.media3:media3-session:1.5.1")
+    implementation("androidx.media:media:1.7.1") // Required for MediaSessionCompat.Token
 
     // DataStore (settings)
     implementation("androidx.datastore:datastore-preferences:1.1.1")

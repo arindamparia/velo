@@ -96,11 +96,23 @@ class VeloApp : Application(), Configuration.Provider {
                 setShowBadge(false)
             }
 
+            val playbackChannel = NotificationChannel(
+                CHANNEL_PLAYBACK,
+                getString(R.string.notif_channel_playback),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = getString(R.string.notif_channel_playback_desc)
+                setShowBadge(false)
+            }
+
             manager.createNotificationChannel(downloadChannel)
+            manager.createNotificationChannel(playbackChannel)
         }
     }
 
     companion object {
         const val CHANNEL_DOWNLOADS = "velo_downloads"
+        const val CHANNEL_PLAYBACK  = "velo_playback"
+        const val PLAYBACK_NOTIF_ID = 2001
     }
 }

@@ -307,7 +307,12 @@ class DownloadWorker @AssistedInject constructor(
                 }
             }
 
-            val uri = resolver.insert(collection, values) ?: return@withContext sourceFile.absolutePath
+            val uri = try {
+                resolver.insert(collection, values) ?: return@withContext sourceFile.absolutePath
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext sourceFile.absolutePath
+            }
 
             try {
                 resolver.openOutputStream(uri)?.use { outStream ->

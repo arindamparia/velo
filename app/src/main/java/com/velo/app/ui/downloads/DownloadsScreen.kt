@@ -53,6 +53,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.doOnLayout
+import android.app.PendingIntent
+import android.os.Build
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Pause
@@ -60,6 +62,11 @@ import androidx.compose.material.icons.rounded.Replay5
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
+import androidx.media3.session.MediaSession
+import androidx.media3.ui.PlayerNotificationManager
+import com.velo.app.VeloApp
 
 
 @androidx.compose.foundation.ExperimentalFoundationApi
@@ -550,16 +557,87 @@ private fun DownloadItem(
             exit = fadeOut(animationSpec = androidx.compose.animation.core.tween(200)),
         ) {
             val exoPlayer = remember(record.filePath) {
-                ExoPlayer.Builder(context).build().apply {
-                    val uri = android.net.Uri.parse(record.filePath)
-                    setMediaItem(MediaItem.fromUri(uri))
-                    prepare()
-                    playWhenReady = true
+                ExoPlayer.Builder(context)
+                    .setSeekBackIncrementMs(5_000L)
+                    .setSeekForwardIncrementMs(10_000L)
+                    .build().apply {
+                        // Embed title + thumbnail in the MediaItem so the system media controls
+                        // (Android 13+) can display them without a separate fetch.
+                        val metadata = MediaMetadata.Builder()
+                            .setTitle(record.title)
+                            .setArtist(record.formatLabel)
+                            .apply {
+                                record.thumbnail?.let {
+                                    setArtworkUri(android.net.Uri.parse(it))
+                                }
+                            }
+                            .build()
+                        setMediaItem(
+                            MediaItem.Builder()
+                                .setUri(android.net.Uri.parse(record.filePath))
+                                .setMediaMetadata(metadata)
+                                .build()
+                        )
+                        prepare()
+                        playWhenReady = true
+                    }
+            }
+
+            // MediaSession → Android 13+ automatically renders the native system media controls
+            // card (seekbar, thumbnail, title, rewind/play-pause/forward) in the notification
+            // shade. No custom notification needed on Android 13+.
+            val mediaSession = remember(record.filePath) {
+                val filteredPlayer = object : androidx.media3.common.ForwardingPlayer(exoPlayer) {
+                    override fun getAvailableCommands(): Player.Commands {
+                        return super.getAvailableCommands().buildUpon()
+                            .remove(Player.COMMAND_SEEK_TO_NEXT)
+                            .remove(Player.COMMAND_SEEK_TO_PREVIOUS)
+                            .remove(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                            .remove(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                            .remove(Player.COMMAND_SET_SPEED_AND_PITCH)
+                            .build()
+                    }
+                }
+                MediaSession.Builder(context, filteredPlayer).build()
+            }
+
+            // For all Android versions (including Android 13+), we must use PlayerNotificationManager
+            // to actually construct and post the media notification. On Android 13+, the OS will 
+            // automatically intercept this MediaStyle notification and render it as the modern squiggly UI.
+            val notifManager = remember(record.filePath) {
+                PlayerNotificationManager.Builder(
+                    context, VeloApp.PLAYBACK_NOTIF_ID, VeloApp.CHANNEL_PLAYBACK,
+                ).setMediaDescriptionAdapter(object : PlayerNotificationManager.MediaDescriptionAdapter {
+                    override fun getCurrentContentTitle(player: Player) = record.title
+                    override fun getCurrentContentText(player: Player) = record.formatLabel
+                    override fun createCurrentContentIntent(player: Player): PendingIntent? {
+                        val intent = context.packageManager
+                            .getLaunchIntentForPackage(context.packageName) ?: return null
+                        return PendingIntent.getActivity(
+                            context, 0, intent,
+                            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                        )
+                    }
+                    override fun getCurrentLargeIcon(
+                        player: Player,
+                        callback: PlayerNotificationManager.BitmapCallback,
+                    ): android.graphics.Bitmap? = null
+                }).build().also { nm ->
+                    nm.setUseRewindAction(true)
+                    nm.setUseFastForwardAction(true)
+                    nm.setUseRewindActionInCompactView(true)
+                    nm.setUseFastForwardActionInCompactView(true)
+                    nm.setPlayer(exoPlayer) // PlayerNotificationManager maps controls from the session/player
+                    nm.setMediaSessionToken(mediaSession.sessionCompatToken)
                 }
             }
 
             DisposableEffect(record.filePath) {
-                onDispose { exoPlayer.release() }
+                onDispose {
+                    notifManager.setPlayer(null)
+                    mediaSession.release()
+                    exoPlayer.release()
+                }
             }
 
             // Pause when app goes to background — unless the matching background setting is on.

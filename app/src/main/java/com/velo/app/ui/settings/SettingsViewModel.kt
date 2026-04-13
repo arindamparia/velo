@@ -20,6 +20,8 @@ sealed class UpdateState {
     data class Available(val info: UpdateChecker.UpdateInfo) : UpdateState()
     object UpToDate : UpdateState()
     object Downloading : UpdateState()
+    // Sent to settings to grant "Install unknown apps", then user returns and retries
+    data class NeedsInstallPermission(val info: UpdateChecker.UpdateInfo) : UpdateState()
 }
 
 @HiltViewModel
@@ -55,18 +57,23 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun downloadAndInstall(context: Context, downloadUrl: String) {
+    fun downloadAndInstall(context: Context, info: UpdateChecker.UpdateInfo) {
+        // Use applicationContext so the coroutine isn't tied to the Activity lifecycle
+        val appContext = context.applicationContext
         viewModelScope.launch {
             _updateState.value = UpdateState.Downloading
             _downloadProgress.value = 0
-            UpdateManager.downloadAndInstall(context, downloadUrl) { progress ->
+            val installed = UpdateManager.downloadAndInstall(appContext, info.downloadUrl) { progress ->
                 _downloadProgress.value = progress
             }
-            _updateState.value = UpdateState.Idle
+            // If install permission was missing, stay in a state that lets user retry
+            _updateState.value = if (installed) UpdateState.Idle
+                                  else UpdateState.NeedsInstallPermission(info)
         }
     }
 
     fun dismissUpdate() {
+        // Delete cached APK so a fresh download happens next time
         _updateState.value = UpdateState.Idle
     }
 }

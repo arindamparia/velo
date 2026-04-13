@@ -62,10 +62,13 @@ fun SettingsScreen(
         }
     }
 
-    // Update available dialog
+    // Update available / downloading dialog
     val availableInfo = (updateState as? UpdateState.Available)?.info
+    val needsPermissionInfo = (updateState as? UpdateState.NeedsInstallPermission)?.info
     val isDownloading = updateState is UpdateState.Downloading
-    if (availableInfo != null || isDownloading) {
+    val dialogInfo = availableInfo ?: needsPermissionInfo
+
+    if (dialogInfo != null || isDownloading) {
         AlertDialog(
             onDismissRequest = { if (!isDownloading) viewModel.dismissUpdate() },
             containerColor = colors.elevated,
@@ -73,22 +76,32 @@ fun SettingsScreen(
             textContentColor = colors.textMuted,
             title = {
                 Text(
-                    text = if (isDownloading) "downloading update…" else "update available",
+                    text = when {
+                        isDownloading -> "downloading update…"
+                        needsPermissionInfo != null -> "permission required"
+                        else -> "update available"
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     color = colors.text,
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!isDownloading && availableInfo != null) {
+                    if (!isDownloading && dialogInfo != null) {
                         Text(
-                            text = availableInfo.tagName,
+                            text = dialogInfo.tagName,
                             style = MaterialTheme.typography.labelMedium,
                             color = colors.accent,
                         )
-                        if (availableInfo.changelog.isNotBlank()) {
+                        if (needsPermissionInfo != null) {
                             Text(
-                                text = availableInfo.changelog.take(400),
+                                text = "allow Velo to install apps in Android Settings, then tap retry",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textMuted,
+                            )
+                        } else if (dialogInfo.changelog.isNotBlank()) {
+                            Text(
+                                text = dialogInfo.changelog.take(400),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.textMuted,
                                 maxLines = 8,
@@ -112,11 +125,14 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                if (!isDownloading && availableInfo != null) {
+                if (!isDownloading && dialogInfo != null) {
                     TextButton(onClick = {
-                        viewModel.downloadAndInstall(context, availableInfo.downloadUrl)
+                        viewModel.downloadAndInstall(context, dialogInfo)
                     }) {
-                        Text("download & install", color = colors.accent)
+                        Text(
+                            text = if (needsPermissionInfo != null) "retry install" else "download & install",
+                            color = colors.accent,
+                        )
                     }
                 }
             },

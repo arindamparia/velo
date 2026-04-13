@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -31,8 +32,10 @@ fun SettingsScreen(
 
     val backgroundAudioEnabled by viewModel.backgroundAudioEnabled.collectAsStateWithLifecycle()
     val backgroundVideoEnabled by viewModel.backgroundVideoEnabled.collectAsStateWithLifecycle()
+    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
+    val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
 
-    // Account auth status — refreshed every time this screen resumes (e.g. returning from Accounts)
+    // Account auth status — refreshed every time this screen resumes
     val facebookCookieFile = remember { File(context.filesDir, "velo_cookies_facebook.txt") }
     val instagramCookieFile = remember { File(context.filesDir, "velo_cookies_instagram.txt") }
     var facebookLoggedIn by remember { mutableStateOf(facebookCookieFile.exists()) }
@@ -50,70 +53,173 @@ fun SettingsScreen(
         onDispose { lifecycle.removeObserver(observer) }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(colors.bg)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-    ) {
-        // ── Top bar ───────────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "back", tint = colors.text)
-            }
-            Text(
-                text = "settings",
-                style = MaterialTheme.typography.titleMedium,
-                color = colors.text,
-            )
+    // "Up to date" snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(updateState) {
+        if (updateState is UpdateState.UpToDate) {
+            snackbarHostState.showSnackbar("you're on the latest version")
+            viewModel.dismissUpdate()
         }
+    }
 
-        HorizontalDivider(color = colors.border, thickness = 0.5.dp)
+    // Update available dialog
+    val availableInfo = (updateState as? UpdateState.Available)?.info
+    val isDownloading = updateState is UpdateState.Downloading
+    if (availableInfo != null || isDownloading) {
+        AlertDialog(
+            onDismissRequest = { if (!isDownloading) viewModel.dismissUpdate() },
+            containerColor = colors.elevated,
+            titleContentColor = colors.text,
+            textContentColor = colors.textMuted,
+            title = {
+                Text(
+                    text = if (isDownloading) "downloading update…" else "update available",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colors.text,
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!isDownloading && availableInfo != null) {
+                        Text(
+                            text = availableInfo.tagName,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.accent,
+                        )
+                        if (availableInfo.changelog.isNotBlank()) {
+                            Text(
+                                text = availableInfo.changelog.take(400),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textMuted,
+                                maxLines = 8,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    if (isDownloading) {
+                        LinearProgressIndicator(
+                            progress = { downloadProgress / 100f },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = colors.accent,
+                            trackColor = colors.border,
+                        )
+                        Text(
+                            text = "$downloadProgress%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.textMuted,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (!isDownloading && availableInfo != null) {
+                    TextButton(onClick = {
+                        viewModel.downloadAndInstall(context, availableInfo.downloadUrl)
+                    }) {
+                        Text("download & install", color = colors.accent)
+                    }
+                }
+            },
+            dismissButton = {
+                if (!isDownloading) {
+                    TextButton(onClick = viewModel::dismissUpdate) {
+                        Text("later", color = colors.textDim)
+                    }
+                }
+            },
+        )
+    }
 
+    Scaffold(
+        containerColor = colors.bg,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = colors.elevated,
+                    contentColor = colors.text,
+                )
+            }
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
+                .fillMaxSize()
+                .padding(innerPadding)
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
-            // ── Account section ───────────────────────────────────────────────
-            SettingsSectionHeader(title = "account")
+            // ── Top bar ───────────────────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "back", tint = colors.text)
+                }
+                Text(
+                    text = "settings",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.text,
+                )
+            }
 
-            SettingsClickRow(
-                title = "accounts",
-                subtitle = buildAccountSubtitle(facebookLoggedIn, instagramLoggedIn),
-                onClick = onNavigateToAccounts,
-            )
+            HorizontalDivider(color = colors.border, thickness = 0.5.dp)
 
-            Spacer(Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+            ) {
+                // ── Account section ───────────────────────────────────────────────
+                SettingsSectionHeader(title = "account")
 
-            // ── Playback section ──────────────────────────────────────────────
-            SettingsSectionHeader(title = "playback")
+                SettingsClickRow(
+                    title = "accounts",
+                    subtitle = buildAccountSubtitle(facebookLoggedIn, instagramLoggedIn),
+                    onClick = onNavigateToAccounts,
+                )
 
-            SettingsToggleRow(
-                title = "background audio",
-                subtitle = "audio keeps playing when you switch apps or lock the screen",
-                checked = backgroundAudioEnabled,
-                onCheckedChange = viewModel::setBackgroundAudio,
-            )
+                Spacer(Modifier.height(8.dp))
 
-            HorizontalDivider(
-                color = colors.borderSubtle,
-                thickness = 0.5.dp,
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
+                // ── Playback section ──────────────────────────────────────────────
+                SettingsSectionHeader(title = "playback")
 
-            SettingsToggleRow(
-                title = "background video",
-                subtitle = "video keeps playing when you switch to another app",
-                checked = backgroundVideoEnabled,
-                onCheckedChange = viewModel::setBackgroundVideo,
-            )
+                SettingsToggleRow(
+                    title = "background audio",
+                    subtitle = "audio keeps playing when you switch apps or lock the screen",
+                    checked = backgroundAudioEnabled,
+                    onCheckedChange = viewModel::setBackgroundAudio,
+                )
+
+                HorizontalDivider(
+                    color = colors.borderSubtle,
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(vertical = 2.dp)
+                )
+
+                SettingsToggleRow(
+                    title = "background video",
+                    subtitle = "video keeps playing when you switch to another app",
+                    checked = backgroundVideoEnabled,
+                    onCheckedChange = viewModel::setBackgroundVideo,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                // ── App section ───────────────────────────────────────────────────
+                SettingsSectionHeader(title = "app")
+
+                val isChecking = updateState is UpdateState.Checking
+                SettingsClickRow(
+                    title = "check for updates",
+                    subtitle = "current version ${com.velo.app.BuildConfig.VERSION_NAME}",
+                    onClick = { if (!isChecking) viewModel.checkForUpdate() },
+                    showSpinner = isChecking,
+                )
+            }
         }
     }
 }
@@ -141,6 +247,7 @@ private fun SettingsClickRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    showSpinner: Boolean = false,
 ) {
     val colors = veloColors
     Row(
@@ -155,12 +262,20 @@ private fun SettingsClickRow(
             Spacer(Modifier.height(2.dp))
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
         }
-        Icon(
-            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-            contentDescription = null,
-            tint = colors.textDim,
-            modifier = Modifier.size(20.dp),
-        )
+        if (showSpinner) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = colors.textDim,
+            )
+        } else {
+            Icon(
+                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = colors.textDim,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 

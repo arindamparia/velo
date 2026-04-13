@@ -23,7 +23,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -72,6 +72,7 @@ fun HomeScreen(
     initialUrl: String? = null,
     onNavigateToDownloads: () -> Unit,
     onNavigateToAccounts: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val colors = veloColors
@@ -160,10 +161,10 @@ fun HomeScreen(
                 color = colors.text,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = onNavigateToAccounts) {
+            IconButton(onClick = onNavigateToSettings) {
                 Icon(
-                    Icons.Rounded.Person,
-                    contentDescription = "accounts",
+                    Icons.Rounded.Settings,
+                    contentDescription = "settings",
                     tint = colors.textMuted,
                     modifier = Modifier.size(18.dp)
                 )
@@ -253,13 +254,32 @@ fun HomeScreen(
 
             // ── Error ─────────────────────────────────────────────────────
             if (loadState is HomeViewModel.LoadState.Error) {
+                val errorState = loadState as HomeViewModel.LoadState.Error
                 item {
                     Column {
                         Text(
-                            text = (loadState as HomeViewModel.LoadState.Error).message.lowercase(),
+                            text = errorState.message.lowercase(),
                             style = MaterialTheme.typography.bodySmall,
                             color = colors.error,
                         )
+                        // FB / IG login prompt
+                        if (errorState.loginRequired) {
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "this content requires a login.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colors.textMuted,
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                TextButton(
+                                    onClick = onNavigateToAccounts,
+                                    contentPadding = PaddingValues(0.dp),
+                                ) {
+                                    Text("log in →", color = colors.accent, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
                         Spacer(Modifier.height(8.dp))
                         TextButton(
                             onClick = { viewModel.forceUpdateYtDlp() },

@@ -1,0 +1,19 @@
+# Copy this file to key.properties and fill in your values.
+# key.properties is gitignored — never commit it.
+#
+# Generate a keystore once:
+#   keytool -genkey -v -keystore velo.keystore -alias velo \
+#     -keyalg RSA -keysize 2048 -validity 36500 \
+#     -dname "CN=Velo, OU=App, O=Velo, L=Unknown, ST=Unknown, C=US"
+#
+# Then encode it for GitHub Secrets:
+#   base64 -i velo.keystore | pbcopy   # macOS
+#   base64 velo.keystore               # Linux
+
+# Path to keystore file, relative to the app/ module directory
+storeFile=../velo.keystore
+
+# Passwords set during keytool -genkey
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=velo
+keyPassword=YOUR_KEY_PASSWORD

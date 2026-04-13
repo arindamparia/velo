@@ -58,7 +58,8 @@ class HomeViewModel @Inject constructor(
         object Loading : LoadState()
         data class Loaded(val info: VideoInfo) : LoadState()
         object Done : LoadState()
-        data class Error(val message: String) : LoadState()
+        // loginRequired = true when the URL is FB/IG and yt-dlp signals auth is needed
+        data class Error(val message: String, val loginRequired: Boolean = false) : LoadState()
     }
 
     private val _loadState = MutableStateFlow<LoadState>(LoadState.Idle)
@@ -109,7 +110,15 @@ class HomeViewModel @Inject constructor(
                 _loadState.value = LoadState.Loaded(info)
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
-                    _loadState.value = LoadState.Error(e.message ?: "couldn't fetch formats")
+                    val msg = e.message ?: "couldn't fetch formats"
+                    val isFbOrIg = url.contains("facebook.com") || url.contains("fb.watch") ||
+                        url.contains("instagram.com")
+                    val loginKeywords = listOf(
+                        "login", "log in", "sign in", "private", "403",
+                        "authentication", "not available", "credentials", "unavailable"
+                    )
+                    val loginRequired = isFbOrIg && loginKeywords.any { msg.contains(it, ignoreCase = true) }
+                    _loadState.value = LoadState.Error(msg, loginRequired)
                 }
             }
         }

@@ -1,9 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+}
+
+// Load local signing config from key.properties (gitignored).
+// In CI, env vars take precedence over the file — no file needed on GitHub Actions.
+val keyProps = Properties().also { props ->
+    val f = rootProject.file("key.properties")
+    if (f.exists()) props.load(f.inputStream())
 }
 
 android {
@@ -21,7 +30,9 @@ android {
         vectorDrawables { useSupportLibrary = true }
 
         ndk {
-            abiFilters += listOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+            // x86/x86_64 are emulator-only ABIs — real Android devices use arm.
+            // Dropping them cuts APK size by ~50%. Use AAB for Play Store (Google handles per-ABI delivery).
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
 
         // Device-verification endpoint — change here instead of in DeviceTracker.kt.
@@ -42,10 +53,22 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // CI: reads from env vars set by the GitHub Actions workflow.
+            // Local: falls back to key.properties (gitignored — see key.properties.example).
+            storeFile     = file(System.getenv("KEYSTORE_PATH")     ?: keyProps.getProperty("storeFile", ""))
+            storePassword = System.getenv("KEYSTORE_PASSWORD")       ?: keyProps.getProperty("storePassword", "")
+            keyAlias      = System.getenv("KEY_ALIAS")               ?: keyProps.getProperty("keyAlias", "")
+            keyPassword   = System.getenv("KEY_PASSWORD")            ?: keyProps.getProperty("keyPassword", "")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -128,7 +151,6 @@ dependencies {
     // yt-dlp wrapper with 16KB Android 15 + Python 3.11+ support (removes libandroid-support.so dependency)
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
-    implementation("io.github.junkfood02.youtubedl-android:aria2c:0.18.1")
 
     // Networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

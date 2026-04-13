@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import com.velo.app.ui.downloads.DownloadsScreen
 import com.velo.app.ui.home.HomeScreen
 import com.velo.app.ui.accounts.AccountsScreen
+import com.velo.app.ui.settings.SettingsScreen
 import com.velo.app.ui.theme.VeloTheme
 import com.velo.app.ui.theme.veloColors
 import com.velo.app.system.AccessGateway
@@ -84,6 +85,7 @@ sealed class VeloRoute(val route: String) {
     object Home : VeloRoute("home")
     object Downloads : VeloRoute("downloads")
     object Accounts : VeloRoute("accounts")
+    object Settings : VeloRoute("settings")
 }
 
 @androidx.compose.foundation.ExperimentalFoundationApi
@@ -128,6 +130,7 @@ fun VeloNavHost(startUrl: String? = null) {
                 initialUrl = startUrl,
                 onNavigateToDownloads = { navController.navigate(VeloRoute.Downloads.route) },
                 onNavigateToAccounts = { navController.navigate(VeloRoute.Accounts.route) },
+                onNavigateToSettings = { navController.navigate(VeloRoute.Settings.route) },
             )
         }
         composable(VeloRoute.Downloads.route) {
@@ -138,6 +141,12 @@ fun VeloNavHost(startUrl: String? = null) {
         composable(VeloRoute.Accounts.route) {
             AccountsScreen(
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(VeloRoute.Settings.route) {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToAccounts = { navController.navigate(VeloRoute.Accounts.route) },
             )
         }
     }

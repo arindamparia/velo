@@ -2,6 +2,16 @@
 
 A beautiful, on-device video downloader for Android built with Kotlin, Jetpack Compose and yt-dlp. Cobalt-inspired design.
 
+## Download
+
+[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="48">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22:%22com.velo.app%22,%22url%22:%22https://github.com/arindamparia/velo%22,%22source%22:%22GitHub%22,%22prefer_oldest_version%22:false%7D)
+
+Or grab the APK directly from the [**Releases**](../../releases/latest) page.
+
+> **Note:** Android will show a "Play Protect" warning because Velo isn't on the Play Store.
+> This is expected for any GitHub-distributed app. Tap **Install anyway** — the APK is signed
+> with a consistent certificate and the full source code is public.
+
 ## Features
 - 🌐 **1000+ sites** — YouTube, Instagram, Facebook, TikTok, Twitter, Reddit, and more via yt-dlp
 - 📋 **Clipboard detection** — copy a video URL, open Velo, see instant download prompt

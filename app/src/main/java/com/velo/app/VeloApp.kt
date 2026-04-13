@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.velo.app.utils.Logger
-import com.yausername.aria2c.Aria2c
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import dagger.hilt.android.HiltAndroidApp
@@ -43,7 +42,6 @@ class VeloApp : Application(), Configuration.Provider {
         try {
             YoutubeDL.getInstance().init(applicationContext)
             FFmpeg.getInstance().init(applicationContext)
-            Aria2c.getInstance().init(applicationContext)
         } catch (e: Exception) {
             e.printStackTrace()
         }

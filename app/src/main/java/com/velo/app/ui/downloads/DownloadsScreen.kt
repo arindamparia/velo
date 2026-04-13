@@ -72,6 +72,8 @@ fun DownloadsScreen(
     val downloads by viewModel.downloads.collectAsStateWithLifecycle()
     val totalStorageBytes by viewModel.totalStorageBytes.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val backgroundAudioEnabled by viewModel.backgroundAudioEnabled.collectAsStateWithLifecycle()
+    val backgroundVideoEnabled by viewModel.backgroundVideoEnabled.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val haptic = LocalHapticFeedback.current
@@ -304,6 +306,8 @@ fun DownloadsScreen(
                             DownloadItem(
                                 record = record,
                                 isPlaying = playingId == record.id,
+                                backgroundAudioEnabled = backgroundAudioEnabled,
+                                backgroundVideoEnabled = backgroundVideoEnabled,
                                 onPlayToggle = {
                                     playingId = if (playingId == record.id) null else record.id
                                 },
@@ -323,6 +327,8 @@ fun DownloadsScreen(
 private fun DownloadItem(
     record: DownloadRecord,
     isPlaying: Boolean,
+    backgroundAudioEnabled: Boolean,
+    backgroundVideoEnabled: Boolean,
     onPlayToggle: () -> Unit,
     onDeleteRequest: () -> Unit,
     onRetryRequest: () -> Unit,
@@ -556,11 +562,17 @@ private fun DownloadItem(
                 onDispose { exoPlayer.release() }
             }
 
-            // Pause when app goes to background (home button, incoming call, etc.)
+            // Pause when app goes to background — unless the matching background setting is on.
+            // rememberUpdatedState captures the latest setting without re-registering the observer.
+            val latestBgEnabled by androidx.compose.runtime.rememberUpdatedState(
+                if (isAudio) backgroundAudioEnabled else backgroundVideoEnabled
+            )
             val lifecycleOwner = LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_PAUSE) exoPlayer.pause()
+                    if (event == Lifecycle.Event.ON_PAUSE && !latestBgEnabled) {
+                        exoPlayer.pause()
+                    }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }

@@ -1,0 +1,65 @@
+name: Release APK
+
+# Triggers whenever you push a version tag — e.g. git tag v1.1.0 && git push --tags
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build & Publish Release APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required to create/edit GitHub Releases
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Decode the base64-encoded keystore stored in GitHub Secrets and write it to disk.
+      # The file is written to the project root so KEYSTORE_PATH below resolves correctly.
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > velo.keystore
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_PATH: velo.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      # Rename from the generic app-release.apk to a versioned filename.
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk \
+             app/build/outputs/apk/release/velo-${{ github.ref_name }}.apk
+
+      # Create the GitHub Release and attach the signed APK.
+      # generate_release_notes=true auto-fills the body from commits since the last tag.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Velo ${{ github.ref_name }}"
+          body: |
+            ## Install
+
+            1. Download `velo-${{ github.ref_name }}.apk` below
+            2. Open the file on your Android device
+            3. If prompted, enable **Install from unknown sources** for your browser/file manager
+            4. Tap **Install** — ignore the Play Protect warning (see README for why)
+
+            > Already installed? The app will update in-place if you have the same or older version.
+          files: app/build/outputs/apk/release/velo-${{ github.ref_name }}.apk
+          generate_release_notes: true

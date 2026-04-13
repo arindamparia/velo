@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.velo.app.update.UpdateManager
 import com.velo.app.ui.theme.veloColors
 import java.io.File
 
@@ -95,7 +96,7 @@ fun SettingsScreen(
                         )
                         if (needsPermissionInfo != null) {
                             Text(
-                                text = "allow Velo to install apps in Android Settings, then tap retry",
+                                text = "enable \"install unknown apps\" for Velo — install will start automatically",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colors.textMuted,
                             )
@@ -127,10 +128,14 @@ fun SettingsScreen(
             confirmButton = {
                 if (!isDownloading && dialogInfo != null) {
                     TextButton(onClick = {
-                        viewModel.downloadAndInstall(context, dialogInfo)
+                        if (needsPermissionInfo != null) {
+                            viewModel.openPermissionSettings(context, needsPermissionInfo)
+                        } else {
+                            viewModel.downloadAndInstall(context, dialogInfo)
+                        }
                     }) {
                         Text(
-                            text = if (needsPermissionInfo != null) "retry install" else "download & install",
+                            text = if (needsPermissionInfo != null) "open settings" else "download & install",
                             color = colors.accent,
                         )
                     }

@@ -17,7 +17,13 @@ object UpdateManager {
 
     fun cachedApk(context: Context): File = File(context.cacheDir, "velo-update.apk")
 
-    /** Returns true if install was launched, false if the user must first grant install permission. */
+    fun installPermissionIntent(context: Context): Intent =
+        Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${context.packageName}"),
+        )
+
+    /** Returns true if install was launched, false if install permission is not yet granted. */
     suspend fun downloadAndInstall(
         context: Context,
         downloadUrl: String,
@@ -25,7 +31,7 @@ object UpdateManager {
     ): Boolean = withContext(Dispatchers.IO) {
         val apkFile = cachedApk(context)
 
-        // Skip download if we already have the file cached
+        // Skip download if already cached
         if (!apkFile.exists()) {
             val request = Request.Builder().url(downloadUrl).build()
             client.newCall(request).execute().use { response ->
@@ -46,37 +52,23 @@ object UpdateManager {
             }
         }
 
-        withContext(Dispatchers.Main) {
-            triggerInstall(context, apkFile)
-        }
+        withContext(Dispatchers.Main) { triggerInstall(context, apkFile) }
     }
 
-    /**
-     * Returns true if the install intent was fired.
-     * Returns false if the user needs to enable "Install unknown apps" — opens that settings screen.
-     */
-    private fun triggerInstall(context: Context, apkFile: File): Boolean {
-        // Android 8+: check if the user has granted install-unknown-apps for this app
-        if (!context.packageManager.canRequestPackageInstalls()) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                Uri.parse("package:${context.packageName}"),
-            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-            context.startActivity(intent)
-            return false
-        }
+    /** Returns true if the installer was launched, false if permission is missing. */
+    fun triggerInstall(context: Context, apkFile: File = cachedApk(context)): Boolean {
+        if (!context.packageManager.canRequestPackageInstalls()) return false
 
         val uri = FileProvider.getUriForFile(
             context,
-            "${context.packageName}.provider",
+            "${context.packageName}.fileprovider",
             apkFile,
         )
-        val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+        context.startActivity(Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
             setDataAndType(uri, "application/vnd.android.package-archive")
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
+        })
         return true
     }
 }

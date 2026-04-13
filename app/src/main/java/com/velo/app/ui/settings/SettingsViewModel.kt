@@ -1,5 +1,6 @@
 package com.velo.app.ui.settings
 
+import android.app.AppOpsManager
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import com.velo.app.settings.SettingsRepository
 import com.velo.app.update.UpdateChecker
 import com.velo.app.update.UpdateManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +22,6 @@ sealed class UpdateState {
     data class Available(val info: UpdateChecker.UpdateInfo) : UpdateState()
     object UpToDate : UpdateState()
     object Downloading : UpdateState()
-    // Sent to settings to grant "Install unknown apps", then user returns and retries
     data class NeedsInstallPermission(val info: UpdateChecker.UpdateInfo) : UpdateState()
 }
 
@@ -41,6 +42,9 @@ class SettingsViewModel @Inject constructor(
     private val _downloadProgress = MutableStateFlow(0)
     val downloadProgress = _downloadProgress.asStateFlow()
 
+    private var appOpsListener: AppOpsManager.OnOpChangedListener? = null
+    private var appOpsManager: AppOpsManager? = null
+
     fun setBackgroundAudio(enabled: Boolean) {
         viewModelScope.launch { settings.setBackgroundAudio(enabled) }
     }
@@ -58,7 +62,6 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun downloadAndInstall(context: Context, info: UpdateChecker.UpdateInfo) {
-        // Use applicationContext so the coroutine isn't tied to the Activity lifecycle
         val appContext = context.applicationContext
         viewModelScope.launch {
             _updateState.value = UpdateState.Downloading
@@ -66,14 +69,60 @@ class SettingsViewModel @Inject constructor(
             val installed = UpdateManager.downloadAndInstall(appContext, info.downloadUrl) { progress ->
                 _downloadProgress.value = progress
             }
-            // If install permission was missing, stay in a state that lets user retry
             _updateState.value = if (installed) UpdateState.Idle
                                   else UpdateState.NeedsInstallPermission(info)
         }
     }
 
+    /**
+     * Opens the "Install unknown apps" settings page and registers an AppOps watcher.
+     * The moment the user enables the toggle, the watcher fires and triggers the install
+     * immediately — no back press needed.
+     */
+    fun openPermissionSettings(context: Context, info: UpdateChecker.UpdateInfo) {
+        val appContext = context.applicationContext
+        stopWatchingOps()
+
+        val ops = appContext.getSystemService(AppOpsManager::class.java)
+        appOpsManager = ops
+
+        val listener = AppOpsManager.OnOpChangedListener { _, _ ->
+            if (appContext.packageManager.canRequestPackageInstalls()) {
+                stopWatchingOps()
+                viewModelScope.launch(Dispatchers.Main) {
+                    UpdateManager.triggerInstall(appContext)
+                    _updateState.value = UpdateState.Idle
+                }
+            }
+        }
+        appOpsListener = listener
+        ops.startWatchingMode(
+            "android:request_install_packages",
+            appContext.packageName,
+            listener,
+        )
+
+        // Open the settings page
+        appContext.startActivity(
+            UpdateManager.installPermissionIntent(appContext).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+    }
+
     fun dismissUpdate() {
-        // Delete cached APK so a fresh download happens next time
+        stopWatchingOps()
         _updateState.value = UpdateState.Idle
+    }
+
+    private fun stopWatchingOps() {
+        appOpsListener?.let { appOpsManager?.stopWatchingMode(it) }
+        appOpsListener = null
+        appOpsManager = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopWatchingOps()
     }
 }

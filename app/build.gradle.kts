@@ -23,8 +23,15 @@ android {
         applicationId = "com.velo.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        // CI injects VERSION_NAME from the git tag (v1.2.3 → 1.2.3).
+        // Local builds fall back to the string below — bump it to match your next tag.
+        val rawVersion = (System.getenv("VERSION_NAME") ?: "1.0.1").trimStart('v')
+        versionName = rawVersion
+        // Encode semver → integer: 1.2.3 → 10203, 1.10.0 → 11000 (minor/patch max 99)
+        val parts = rawVersion.split(".").map { it.toIntOrNull() ?: 0 }
+        versionCode = (parts.getOrElse(0) { 0 } * 10000) +
+                      (parts.getOrElse(1) { 0 } * 100) +
+                       parts.getOrElse(2) { 0 }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }

@@ -38,6 +38,8 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          # Strip leading 'v' from tag (v1.2.3 → 1.2.3) and inject into the build
+          VERSION_NAME: ${{ github.ref_name }}
         run: ./gradlew assembleRelease --no-daemon
 
       # Rename from the generic app-release.apk to a versioned filename.
